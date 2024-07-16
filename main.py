@@ -11,6 +11,7 @@ BALL_SPEED = 5
 score_player1 = 0
 score_player2 = 0
 game_over = False
+is_multiplayer = False
 
 window = tk.Tk()
 window.title("Ping Pong Game")
@@ -82,24 +83,40 @@ def reset_ball():
     ball_dy = random.choice([-BALL_SPEED, BALL_SPEED])
 
 def show_game_over():
-    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2, text="GAME OVER", font=("Helvetica", 40), fill="white")
-    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 + 50, text=f"Player 1: {score_player1}  Player 2: {score_player2}", font=("Helvetica", 20), fill="white")
-    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 + 100, text="Press 'R' to Restart", font=("Helvetica", 20), fill="white")
+    global is_multiplayer
+
+    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 - 50, text="GAME OVER", font=("Helvetica", 40), fill="white")
+    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2, text=f"Player 1: {score_player1}  Player 2: {score_player2}", font=("Helvetica", 20), fill="white")
+    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 + 50, text="Press 'R' to Restart or 'Q' to Quit", font=("Helvetica", 20), fill="white")
 
 def move_paddle(event):
+    global is_multiplayer
+
     if event.keysym == "w" and canvas.coords(paddle1)[1] > 0:
         canvas.move(paddle1, 0, -20)
     elif event.keysym == "s" and canvas.coords(paddle1)[3] < CANVAS_HEIGHT:
         canvas.move(paddle1, 0, 20)
 
-def update_ai_paddle():
-    ai_paddle_center = canvas.coords(paddle2)[1] + PAD_HEIGHT // 2
-    ball_center_y = canvas.coords(ball)[1] + BALL_SIZE // 2
+    if is_multiplayer:
+        if event.keysym == "Up" and canvas.coords(paddle2)[1] > 0:
+            canvas.move(paddle2, 0, -20)
+        elif event.keysym == "Down" and canvas.coords(paddle2)[3] < CANVAS_HEIGHT:
+            canvas.move(paddle2, 0, 20)
 
-    if ball_center_y < ai_paddle_center and canvas.coords(paddle2)[1] > 0:
-        canvas.move(paddle2, 0, -5)
-    elif ball_center_y > ai_paddle_center and canvas.coords(paddle2)[3] < CANVAS_HEIGHT:
-        canvas.move(paddle2, 0, 5)
+def toggle_multiplayer(event):
+    global is_multiplayer
+    is_multiplayer = not is_multiplayer
+
+    if is_multiplayer:
+        canvas.coords(paddle1, 50, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+                      50 + PAD_WIDTH, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2)
+        canvas.coords(paddle2, CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+                      CANVAS_WIDTH - 50, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2)
+    else:
+        canvas.coords(paddle1, 50, CANVAS_HEIGHT // 4 - PAD_HEIGHT // 2,
+                      50 + PAD_WIDTH, CANVAS_HEIGHT // 4 + PAD_HEIGHT // 2)
+        canvas.coords(paddle2, CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 4 * 3 - PAD_HEIGHT // 2,
+                      CANVAS_WIDTH - 50, CANVAS_HEIGHT // 4 * 3 + PAD_HEIGHT // 2)
 
 def restart_game(event):
     global score_player1, score_player2, game_over
@@ -107,9 +124,21 @@ def restart_game(event):
     score_player2 = 0
     game_over = False
     reset_ball()
+    canvas.delete("all")
+    canvas.create_line(CANVAS_WIDTH // 2, 0, CANVAS_WIDTH // 2, CANVAS_HEIGHT, fill="white", dash=(15, 10))
+    paddle1 = canvas.create_rectangle(50, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+                                      50 + PAD_WIDTH, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2,
+                                      fill="white")
+    paddle2 = canvas.create_rectangle(CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+                                      CANVAS_WIDTH - 50, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2,
+                                      fill="white")
+    ball = canvas.create_oval(CANVAS_WIDTH // 2 - BALL_SIZE // 2, CANVAS_HEIGHT // 2 - BALL_SIZE // 2,
+                              CANVAS_WIDTH // 2 + BALL_SIZE // 2, CANVAS_HEIGHT // 2 + BALL_SIZE // 2,
+                              fill="white")
 
 canvas.bind_all("<KeyPress-w>", move_paddle)
 canvas.bind_all("<KeyPress-s>", move_paddle)
+canvas.bind_all("<KeyPress-T>", toggle_multiplayer)
 canvas.bind_all("<KeyPress-R>", restart_game)
 
 def game_loop():
