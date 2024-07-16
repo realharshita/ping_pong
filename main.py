@@ -12,6 +12,7 @@ score_player1 = 0
 score_player2 = 0
 game_over = False
 is_multiplayer = False
+ai_difficulty = 5
 
 window = tk.Tk()
 window.title("Ping Pong Game")
@@ -52,17 +53,17 @@ def update_ball_position():
         if ball_top <= 0 or ball_bottom >= CANVAS_HEIGHT:
             ball_dy = -ball_dy
         
-        if ball_left <= PAD_WIDTH + BALL_SIZE:
+        if ball_left <= PAD_WIDTH:
             paddle1_pos = canvas.coords(paddle1)
-            if paddle1_pos[1] <= ball_bottom and paddle1_pos[3] >= ball_top and ball_left <= paddle1_pos[2]:
+            if paddle1_pos[1] <= ball_bottom and paddle1_pos[3] >= ball_top:
                 ball_dx = abs(ball_dx)
             else:
                 score_player2 += 1
                 reset_ball()
         
-        elif ball_right >= CANVAS_WIDTH - PAD_WIDTH - BALL_SIZE:
+        elif ball_right >= CANVAS_WIDTH - PAD_WIDTH:
             paddle2_pos = canvas.coords(paddle2)
-            if paddle2_pos[1] <= ball_bottom and paddle2_pos[3] >= ball_top and ball_right >= paddle2_pos[0]:
+            if paddle2_pos[1] <= ball_bottom and paddle2_pos[3] >= ball_top:
                 ball_dx = -abs(ball_dx)
             else:
                 score_player1 += 1
@@ -72,7 +73,14 @@ def update_ball_position():
         game_over = True
         show_game_over()
 
-    update_ai_paddle()
+def update_ai_paddle():
+    paddle2_center = canvas.coords(paddle2)[1] + PAD_HEIGHT // 2
+    ball_center = canvas.coords(ball)[1] + BALL_SIZE // 2
+
+    if paddle2_center < ball_center:
+        canvas.move(paddle2, 0, ai_difficulty)
+    elif paddle2_center > ball_center:
+        canvas.move(paddle2, 0, -ai_difficulty)
 
 def reset_ball():
     global ball_start_x, ball_start_y, ball_dx, ball_dy
@@ -87,7 +95,7 @@ def show_game_over():
 
     canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 - 50, text="GAME OVER", font=("Helvetica", 40), fill="white")
     canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2, text=f"Player 1: {score_player1}  Player 2: {score_player2}", font=("Helvetica", 20), fill="white")
-    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 + 50, text="Press 'R' to Restart or 'Q' to Quit", font=("Helvetica", 20), fill="white")
+    canvas.create_text(CANVAS_WIDTH // 2, CANVAS_HEIGHT // 2 + 50, text="Press 'Restart' to Restart or 'Quit' to Quit", font=("Helvetica", 20), fill="white")
 
 def move_paddle(event):
     global is_multiplayer
@@ -103,7 +111,7 @@ def move_paddle(event):
         elif event.keysym == "Down" and canvas.coords(paddle2)[3] < CANVAS_HEIGHT:
             canvas.move(paddle2, 0, 20)
 
-def toggle_multiplayer(event):
+def toggle_multiplayer():
     global is_multiplayer
     is_multiplayer = not is_multiplayer
 
@@ -118,7 +126,7 @@ def toggle_multiplayer(event):
         canvas.coords(paddle2, CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 4 * 3 - PAD_HEIGHT // 2,
                       CANVAS_WIDTH - 50, CANVAS_HEIGHT // 4 * 3 + PAD_HEIGHT // 2)
 
-def restart_game(event):
+def restart_game():
     global score_player1, score_player2, game_over
     score_player1 = 0
     score_player2 = 0
@@ -126,25 +134,56 @@ def restart_game(event):
     reset_ball()
     canvas.delete("all")
     canvas.create_line(CANVAS_WIDTH // 2, 0, CANVAS_WIDTH // 2, CANVAS_HEIGHT, fill="white", dash=(15, 10))
-    paddle1 = canvas.create_rectangle(50, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+    canvas.create_rectangle(50, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
                                       50 + PAD_WIDTH, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2,
-                                      fill="white")
-    paddle2 = canvas.create_rectangle(CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
+                                      fill="white", tags="paddle1")
+    canvas.create_rectangle(CANVAS_WIDTH - 50 - PAD_WIDTH, CANVAS_HEIGHT // 2 - PAD_HEIGHT // 2,
                                       CANVAS_WIDTH - 50, CANVAS_HEIGHT // 2 + PAD_HEIGHT // 2,
-                                      fill="white")
-    ball = canvas.create_oval(CANVAS_WIDTH // 2 - BALL_SIZE // 2, CANVAS_HEIGHT // 2 - BALL_SIZE // 2,
+                                      fill="white", tags="paddle2")
+    canvas.create_oval(CANVAS_WIDTH // 2 - BALL_SIZE // 2, CANVAS_HEIGHT // 2 - BALL_SIZE // 2,
                               CANVAS_WIDTH // 2 + BALL_SIZE // 2, CANVAS_HEIGHT // 2 + BALL_SIZE // 2,
-                              fill="white")
+                              fill="white", tags="ball")
+    canvas.bind_all("<KeyPress-w>", move_paddle)
+    canvas.bind_all("<KeyPress-s>", move_paddle)
+    canvas.bind_all("<KeyPress-Up>", move_paddle)
+    canvas.bind_all("<KeyPress-Down>", move_paddle)
+    canvas.bind_all("<KeyPress-T>", toggle_multiplayer)
+
+def increase_difficulty():
+    global ai_difficulty
+    ai_difficulty += 1
+
+def quit_game():
+    window.destroy()
+
+# Buttons
+button_frame = tk.Frame(window)
+button_frame.pack()
+
+multiplayer_button = tk.Button(button_frame, text="Toggle Multiplayer", command=toggle_multiplayer)
+multiplayer_button.grid(row=0, column=0, padx=10, pady=10)
+
+restart_button = tk.Button(button_frame, text="Restart", command=restart_game)
+restart_button.grid(row=0, column=1, padx=10, pady=10)
+
+quit_button = tk.Button(button_frame, text="Quit", command=quit_game)
+quit_button.grid(row=0, column=2, padx=10, pady=10)
+
+difficulty_button = tk.Button(button_frame, text="Increase Difficulty", command=increase_difficulty)
+difficulty_button.grid(row=0, column=3, padx=10, pady=10)
 
 canvas.bind_all("<KeyPress-w>", move_paddle)
 canvas.bind_all("<KeyPress-s>", move_paddle)
-canvas.bind_all("<KeyPress-T>", toggle_multiplayer)
-canvas.bind_all("<KeyPress-R>", restart_game)
+canvas.bind_all("<KeyPress-Up>", move_paddle)
+canvas.bind_all("<KeyPress-Down>", move_paddle)
 
 def game_loop():
     update_ball_position()
+    if not is_multiplayer:
+        update_ai_paddle()  # Call the AI paddle update function only in single player mode
     if not game_over:
         window.after(30, game_loop)
 
 game_loop()
+
 window.mainloop()
